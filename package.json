@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-leetcode-daily-question",
   "description": "获取Leetcode每日一题",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -9,6 +9,11 @@
     "dist"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/okatu-loli/koishi-plugin-leetcode-daily-question",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/okatu-loli/koishi-plugin-leetcode-daily-question"
+  },
   "keywords": [
     "chatbot",
     "koishi",

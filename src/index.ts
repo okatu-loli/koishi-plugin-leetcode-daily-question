@@ -1,9 +1,11 @@
-import { Context, Schema } from 'koishi'
+import { Context, Schema, segment } from 'koishi'
 import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
+import {} from 'koishi-plugin-puppeteer'
 
 export const name = 'leetcode-daily-question'
+export const inject = ['puppeteer']
 
 const cacheFilePath = path.resolve(__dirname, 'cache.json')
 
@@ -20,6 +22,36 @@ function loadCache() {
 
 function saveCache(cache) {
   fs.writeFileSync(cacheFilePath, JSON.stringify(cache), 'utf-8')
+}
+
+async function fetchQuestionDetails(slug) {
+  try {
+    const response = await axios.post('https://leetcode.cn/graphql/', {
+      query: `
+        query questionTranslations($titleSlug: String!) {
+          question(titleSlug: $titleSlug) {
+            translatedTitle
+            translatedContent
+          }
+        }
+      `,
+      variables: {
+        titleSlug: slug,
+      },
+      operationName: "questionTranslations",
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Referer': 'https://leetcode.cn/',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+      },
+    })
+
+    return response.data.data.question
+  } catch (error) {
+    console.error('Failed to fetch question details:', error)
+    return null
+  }
 }
 
 export function apply(ctx: Context) {
@@ -63,13 +95,13 @@ export function apply(ctx: Context) {
     }
   }
 
-  function isSameDay(date1: Date, date2: Date): boolean {
+  function isSameDay(date1, date2) {
     return date1.getFullYear() === date2.getFullYear() &&
       date1.getMonth() === date2.getMonth() &&
       date1.getDate() === date2.getDate()
   }
 
-  ctx.command('每日一题', '获取每日一题')
+  ctx.command('每日一题')
     .action(async ({ session }) => {
       const now = new Date()
       if (!cache.question || !isSameDay(now, new Date(cache.lastUpdate))) {
@@ -78,7 +110,39 @@ export function apply(ctx: Context) {
 
       const question = cache.question
       if (question) {
-        session.send(`今日题目: ${question.name}\n链接: ${question.link}`)
+        const details = await fetchQuestionDetails(question.slug)
+        if (details) {
+          const htmlContent = `
+            <html>
+              <head>
+                <style>
+                  body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                  }
+                </style>
+              </head>
+              <body>
+                <h1>${details.translatedTitle}</h1>
+                ${details.translatedContent}
+              </body>
+            </html>
+          `
+
+          try {
+            const page = await ctx.puppeteer.page()
+            await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
+            const screenshotBuffer = await page.screenshot({ fullPage: true })
+
+            await session.send(`今日题目: ${details.translatedTitle}\n链接: ${question.link}`)
+            await session.send(segment.image(screenshotBuffer, 'image/png'))
+          } catch (error) {
+            console.error('Failed to render page:', error)
+            session.send('题目截图获取失败，请稍后再试。')
+          }
+        } else {
+          session.send('题目详情获取失败，请稍后再试。')
+        }
       } else {
         session.send('今日题目获取失败，请稍后再试。')
       }
