@@ -3,6 +3,7 @@ import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
 import {} from 'koishi-plugin-puppeteer'
+import markdown from 'markdown-it'
 
 export const name = 'leetcode-daily-question'
 export const inject = ['puppeteer']
@@ -112,22 +113,46 @@ export function apply(ctx: Context) {
       if (question) {
         const details = await fetchQuestionDetails(question.slug)
         if (details) {
-          const htmlContent = `
-            <html>
-              <head>
-                <style>
-                  body {
-                    font-family: Arial, sans-serif;
-                    padding: 20px;
-                  }
-                </style>
-              </head>
-              <body>
-                <h1>${details.translatedTitle}</h1>
-                ${details.translatedContent}
-              </body>
-            </html>
-          `
+          const contentToRender = details.translatedContent
+          const isHtml = /<\/?[a-z][\s\S]*>/i.test(contentToRender) // 简单判断是否为HTML
+          let htmlContent
+
+          if (isHtml) {
+            htmlContent = `
+              <html>
+                <head>
+                  <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      padding: 20px;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <h1>${details.translatedTitle}</h1>
+                  ${contentToRender}
+                </body>
+              </html>
+            `
+          } else {
+            const md = new markdown()
+            htmlContent = `
+              <html>
+                <head>
+                  <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      padding: 20px;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <h1>${details.translatedTitle}</h1>
+                  ${md.render(contentToRender)}
+                </body>
+              </html>
+            `
+          }
 
           try {
             const page = await ctx.puppeteer.page()
