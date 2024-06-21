@@ -3,10 +3,10 @@ import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
 import {} from 'koishi-plugin-puppeteer'
-import markdown from 'markdown-it'
+import {} from 'koishi-plugin-markdown-to-image-service'
 
 export const name = 'leetcode-daily-question'
-export const inject = ['puppeteer']
+export const inject = ['puppeteer', 'markdownToImage']
 
 const cacheFilePath = path.resolve(__dirname, 'cache.json')
 
@@ -115,10 +115,10 @@ export function apply(ctx: Context) {
         if (details) {
           const contentToRender = details.translatedContent
           const isHtml = /<\/?[a-z][\s\S]*>/i.test(contentToRender) // 简单判断是否为HTML
-          let htmlContent
+          let imageBuffer
 
           if (isHtml) {
-            htmlContent = `
+            const htmlContent = `
               <html>
                 <head>
                   <style>
@@ -134,37 +134,28 @@ export function apply(ctx: Context) {
                 </body>
               </html>
             `
+            try {
+              const page = await ctx.puppeteer.page()
+              await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
+              imageBuffer = await page.screenshot({ fullPage: true })
+            } catch (error) {
+              console.error('Failed to render page:', error)
+              session.send('题目截图获取失败，请稍后再试。')
+              return
+            }
           } else {
-            const md = new markdown()
-            htmlContent = `
-              <html>
-                <head>
-                  <style>
-                    body {
-                      font-family: Arial, sans-serif;
-                      padding: 20px;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <h1>${details.translatedTitle}</h1>
-                  ${md.render(contentToRender)}
-                </body>
-              </html>
-            `
+            const markdownContent = `# ${details.translatedTitle}\n\n${contentToRender}`
+            try {
+              imageBuffer = await ctx.markdownToImage.convertToImage(markdownContent)
+            } catch (error) {
+              console.error('Failed to convert markdown to image:', error)
+              session.send('题目截图获取失败，请稍后再试。')
+              return
+            }
           }
 
-          try {
-            const page = await ctx.puppeteer.page()
-            await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
-            const screenshotBuffer = await page.screenshot({ fullPage: true })
-
-            await session.send(`今日题目: ${details.translatedTitle}\n链接: ${question.link}`)
-            await session.send(segment.image(screenshotBuffer, 'image/png'))
-          } catch (error) {
-            console.error('Failed to render page:', error)
-            session.send('题目截图获取失败，请稍后再试。')
-          }
+          await session.send(`今日题目: ${details.translatedTitle}\n链接: ${question.link}`)
+          await session.send(segment.image(imageBuffer, 'image/png'))
         } else {
           session.send('题目详情获取失败，请稍后再试。')
         }
