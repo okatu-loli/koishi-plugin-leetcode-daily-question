@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-leetcode-daily-question",
   "description": "获取Leetcode每日一题",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -21,7 +21,9 @@
     "leetcode"
   ],
   "service": {
-    "required": ["http"]
+    "required": [
+      "http"
+    ]
   },
   "peerDependencies": {
     "koishi": "^4.17.8"
