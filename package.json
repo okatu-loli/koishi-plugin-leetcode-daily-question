@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-leetcode-daily-question",
   "description": "获取Leetcode每日一题",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -17,12 +17,17 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "leetcode"
   ],
+  "service": {
+    "required": ["http"]
+  },
   "peerDependencies": {
     "koishi": "^4.17.8"
   },
   "dependencies": {
-    "koishi-plugin-markdown-to-image-service": "^1.1.8"
+    "koishi-plugin-markdown-to-image-service": "^1.1.8",
+    "axios": "^1.6.7"
   }
 }
