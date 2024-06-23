@@ -5,6 +5,8 @@ import path from 'path'
 import {} from 'koishi-plugin-puppeteer'
 import {} from 'koishi-plugin-markdown-to-image-service'
 
+//
+
 export const name = 'leetcode-daily-question'
 export const inject = ['puppeteer', 'markdownToImage']
 
